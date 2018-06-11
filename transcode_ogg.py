@@ -10,14 +10,22 @@ gi.require_version('Gst', '1.0')
 
 from gi.repository import Gst, GObject, Gtk
 
-COUNTER = 0
+ARRAY = []
+with open('timestamps.txt') as my_file:
+    for line in my_file:
+        ARRAY.append(line)
+
+print ARRAY
 
 def setup_probe(element):
-    pad = element.get_static_pad("text_sink")
-    pad.add_probe(Gst.PadProbeType.BUFFER, callback, None)
+    pad = element.get_static_pad("video_sink")
+    pad.add_probe(Gst.PadProbeType.BUFFER, callback, ARRAY)
 
 def callback(pad, info, data):
-    print(pad.get_current_caps(), pad.get_parent_element())
+    element = pad.get_parent_element()
+    print(data)
+    element.set_property("text", data[0])
+    data.pop(0)
     return Gst.PadProbeReturn.OK
 
 Gtk.init(sys.argv)
@@ -25,40 +33,45 @@ Gtk.init(sys.argv)
 # initialize GStreamer
 Gst.init(sys.argv)
 
-pipeline = Gst.Pipeline.new("player")
+# pipeline = Gst.Pipeline.new("player")
 
-src = Gst.ElementFactory.make("filesrc", "src")
-src.set_property("location", "video.ogg")
-pipeline.add(src)
+# src = Gst.ElementFactory.make("filesrc", "src")
+# src.set_property("location", "video.ogg")
+# pipeline.add(src)
 
-oggdemux = Gst.ElementFactory.make("oggdemux", "decode")
-pipeline.add(oggdemux)
+# decode = Gst.ElementFactory.make("decodebin", "decode")
+# pipeline.add(decode)
 
-theoradec = Gst.ElementFactory.make("theoradec", None)
-pipeline.add(theoradec)
+# videoconvert = Gst.ElementFactory.make("videoconvert", None)
+# pipeline.add(videoconvert)
 
-avenc_mpeg4 = Gst.ElementFactory.make("avenc_mpeg4", None)
-pipeline.add(avenc_mpeg4)
+# videoscale = Gst.ElementFactory.make("videoscale", None)
+# pipeline.add(videoscale)
 
-textoverlay = Gst.ElementFactory.make("textoverlay", "text")
-pipeline.add(textoverlay)
-setup_probe(textoverlay)
+# textoverlay = Gst.ElementFactory.make("textoverlay", "text")
+# textoverlay.set_property("text", "yesssss")
+# pipeline.add(textoverlay)
+# setup_probe(textoverlay)
 
-avimux = Gst.ElementFactory.make("avimux", None)
-pipeline.add(avimux)
+# avimux = Gst.ElementFactory.make("avimux", None)
+# pipeline.add(avimux)
 
-sink = Gst.ElementFactory.make("filesink", "filesink")
-sink.set_property("location", "timestamp.avi")
-pipeline.add(sink)
-# ! theoradec ! ffmpegcolorspace ! autovideosink 
+# sink = Gst.ElementFactory.make("filesink", "filesink")
+# sink.set_property("location", "timestamp.avi")
+# pipeline.add(sink)
+# # ! theoradec ! ffmpegcolorspace ! autovideosink 
 
-src.link(oggdemux)
-oggdemux.link(theoradec)
-theoradec.link(avenc_mpeg4)
-avenc_mpeg4.link(avimux)
-# decode.link(textoverlay)
-avimux.link(sink)
+# src.link(decode)
+# decode.link(videoconvert)
+# videoconvert.link(videoscale)
+# videoscale.link(textoverlay)
+# textoverlay.link(avimux)
+# avimux.link(sink)
+
+pipeline = Gst.parse_launch("filesrc location=video.ogg ! decodebin ! videoconvert ! videoscale ! textoverlay name=textoverlay ! avimux ! filesink location=test.avi")
 # pad = sink.get_static_pad("sink")
+textoverlay = pipeline.get_by_name('textoverlay')
+setup_probe(textoverlay)
 
 # pipeline.add(src)
 
@@ -72,6 +85,10 @@ avimux.link(sink)
 # ogg.link(sink)
 
 # decode.link(sink)
+
+# pipeline.set_state(Gst.State.NULL)
+
+# pipeline.set_state(Gst.State.PAUSED)
 
 pipeline.set_state(Gst.State.PLAYING)
 time.sleep(30)

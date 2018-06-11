@@ -10,13 +10,14 @@ gi.require_version('Gst', '1.0')
 
 from gi.repository import Gst, GObject, Gtk
 
+FILE = open("timestamps.txt", "a")
+
 def setup_probe(element):
     pad = element.get_static_pad("sink")
     pad.add_probe(Gst.PadProbeType.BUFFER, callback, None)
 
 def callback(pad, info, data):
-    with open('timestamps.txt', 'a') as the_file:
-        the_file.write(str(datetime.datetime.now())+'\n')
+    FILE.write(str(datetime.datetime.now())+'\n')
     return Gst.PadProbeReturn.OK
 
 Gtk.init(sys.argv)
@@ -62,9 +63,9 @@ setup_probe(sink)
 # pipeline.add(decode)
 
 src.link(videoconvert)
+# camerafilter.link(videoconvert)
 videoconvert.link(videoscale)
 videoscale.link(theoraenc)
-# camerafilter.link(theoraenc)
 theoraenc.link(ogg)
 ogg.link(sink)
 
@@ -75,3 +76,5 @@ time.sleep(15)
 pipeline.send_event(Gst.Event.new_eos())
 time.sleep(5)
 pipeline.set_state(Gst.State.NULL)
+
+FILE.close()
